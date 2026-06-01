@@ -1,6 +1,6 @@
 {
   "name": "perfectdraft-card",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Custom Lovelace card for the PerfectDraft Pro Home Assistant integration",
   "main": "dist/perfectdraft-card.js",
   "type": "module",

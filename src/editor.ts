@@ -2,10 +2,10 @@ import { LitElement, html, css, type CSSResultGroup, type TemplateResult } from 
 import { customElement, property, state } from "lit/decorators.js";
 
 import type { PerfectDraftCardConfig } from "./types.js";
-import { GLASS_SIZES, DEFAULT_GLASS_SIZE, DOMAIN } from "./const.js";
+import { GLASS_SIZES, DEFAULT_GLASS_SIZE, DOMAIN, LAYOUTS, DEFAULT_LAYOUT } from "./const.js";
 import { getAllBeers } from "./beer-catalog.js";
 
-const EDITOR_VERSION = "0.1.6";
+const EDITOR_VERSION = "0.2.0";
 
 interface DiscoveredDevice {
   deviceId: string;
@@ -134,6 +134,52 @@ export class PerfectDraftCardEditor extends LitElement {
         </div>
 
         <div class="field">
+          <label>Layout</label>
+          <select
+            .value=${this._config.layout ?? DEFAULT_LAYOUT}
+            @change=${(e: Event) => this._updateConfig("layout", (e.target as HTMLSelectElement).value)}
+          >
+            ${LAYOUTS.map(
+              (l) => html`
+                <option value=${l.value} ?selected=${(this._config.layout ?? DEFAULT_LAYOUT) === l.value}>
+                  ${l.label}
+                </option>
+              `,
+            )}
+          </select>
+        </div>
+
+        <div class="advanced-heading">Emoji matrix (advanced)</div>
+
+        <div class="field">
+          <label>Matrix columns</label>
+          <select
+            .value=${this._config.matrix_columns ? String(this._config.matrix_columns) : "auto"}
+            @change=${(e: Event) => {
+              const v = (e.target as HTMLSelectElement).value;
+              this._updateConfig("matrix_columns", v === "auto" ? undefined : parseInt(v, 10));
+            }}
+          >
+            <option value="auto" ?selected=${!this._config.matrix_columns}>Auto</option>
+            ${[3, 4, 5, 6, 7, 8].map(
+              (n) => html`
+                <option value=${String(n)} ?selected=${this._config.matrix_columns === n}>${n} columns</option>
+              `,
+            )}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Max matrix width (e.g. 480px or 60%)</label>
+          <input
+            type="text"
+            .value=${this._config.max_matrix_width ?? ""}
+            placeholder="(unset — fill the zone)"
+            @input=${(e: InputEvent) => this._updateConfig("max_matrix_width", (e.target as HTMLInputElement).value || undefined)}
+          />
+        </div>
+
+        <div class="field">
           <label>Beer Entity (optional — for automatic beer detection)</label>
           <input
             type="text"
@@ -176,6 +222,15 @@ export class PerfectDraftCardEditor extends LitElement {
         opacity: 0.4;
         text-align: right;
         margin-bottom: 12px;
+      }
+      .advanced-heading {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.5;
+        margin: 4px 0 8px;
+        border-top: 1px solid var(--divider-color, #333);
+        padding-top: 12px;
       }
       .warning {
         padding: 12px;
