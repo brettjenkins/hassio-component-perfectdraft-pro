@@ -12,6 +12,20 @@ export const GLASS_SIZES = [
 export const DEFAULT_GLASS_SIZE = 330;
 export const DEFAULT_BEER = "stella-artois";
 
+export const LAYOUTS = [
+  { value: "landscape", label: "Landscape (default)" },
+  { value: "portrait", label: "Portrait (stacked)" },
+  { value: "compact", label: "Compact (single row)" },
+  { value: "hero", label: "Hero (image-forward)" },
+  { value: "vessel", label: "Vessel (single gauge)" },
+] as const;
+
+export const DEFAULT_LAYOUT = "landscape";
+
+export function resolveLayout(value: unknown): string {
+  return LAYOUTS.some((l) => l.value === value) ? (value as string) : DEFAULT_LAYOUT;
+}
+
 export const FRESHNESS_THRESHOLDS = {
   WARNING: 14,
   URGENT: 7,

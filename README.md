@@ -8,8 +8,9 @@ Designed and optimised for the Sonoff NSPanel Pro 120 in landscape mode, but wor
 
 ## Features
 
-- **Beer emoji pictogram** — see how many glasses remain in your keg at a glance
-- **Built-in beer catalog** — 45+ PerfectDraft beers with brand color palettes
+- **Five layouts** — landscape, portrait, compact, hero, or single-vessel gauge; choose what fits your dashboard (defaults to landscape, so existing cards are unchanged)
+- **Beer emoji pictogram** — see how many glasses remain in your keg at a glance, in a grid that shrinks to fit narrow cards
+- **Built-in beer catalog** — 75+ PerfectDraft beers, 68 with real keg photos; brand-tinted fallback art for the rest so every beer looks intentional
 - **Glass size selector** — tap the emoji zone to choose between 250 mL, 330 mL, 500 mL, UK pint, or US pint
 - **Beer selector** — tap the label zone to pick your current beer from the catalog
 - **Freshness warnings** — escalating CSS-animated alerts as your keg approaches its 30-day expiry
@@ -53,6 +54,9 @@ type: custom:perfectdraft-card
 device_id: "perfectdraft_pro"
 beer_name: "Leffe Blonde"
 glass_size: 330
+layout: landscape                 # landscape | portrait | compact | hero | vessel
+# matrix_columns: auto            # "auto" or a fixed number of emoji columns
+# max_matrix_width: "480px"       # cap + centre the emoji grid on wide cards
 # beer_entity: sensor.perfectdraft_pro_keg_name  # future: auto beer detection
 # custom_beers:
 #   - name: "My Homebrew IPA"
@@ -70,6 +74,20 @@ glass_size: 330
 | Tap the **right zone** (emoji grid) | Opens glass size selection dialog |
 
 Selections persist in your browser across page refreshes.
+
+## Layouts
+
+Set `layout` (or pick it in the visual editor) to match where the card lives:
+
+| Layout | Best for |
+|--------|----------|
+| `landscape` (default) | Wall panels (NSPanel Pro), wide cards — label left, emoji grid right |
+| `portrait` | Phones and tall/narrow columns — label on top, grid below |
+| `compact` | Dense dashboards — a single row with a remaining-beer bar |
+| `hero` | Showing off the beer — full-bleed keg photo with status overlaid |
+| `vessel` | A calm single glass that fills to show how much is left |
+
+The emoji grid is width-tolerant: it shrinks to fit narrow cards instead of overflowing. Power users can force a column count with `matrix_columns` or cap/centre the grid with `max_matrix_width`.
 
 ## Supported glass sizes
 
