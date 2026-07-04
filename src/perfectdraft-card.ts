@@ -15,6 +15,7 @@ import {
 import {
   type BeerEntry,
   resolveBeer,
+  getBeerByKegId,
   getAllBeers,
   searchBeers,
   getBreweryLogo,
@@ -67,7 +68,7 @@ export class PerfectDraftCard extends LitElement {
   @state() private _beerSearchQuery = "";
   @state() private _failedImages = new Set<string>();
 
-  private _entityIds: { temperature?: string; kegRemaining?: string; kegFreshness?: string } = {};
+  private _entityIds: { temperature?: string; kegRemaining?: string; kegFreshness?: string; kegProduct?: string; kegName?: string } = {};
 
   public setConfig(config: PerfectDraftCardConfig): void {
     if (!config.device_id) {
@@ -169,6 +170,10 @@ export class PerfectDraftCard extends LitElement {
         this._entityIds.kegRemaining = entityId;
       } else if (key === "keg_freshness") {
         this._entityIds.kegFreshness = entityId;
+      } else if (key === "keg_product_id") {
+        this._entityIds.kegProduct = entityId;
+      } else if (key === "keg_name") {
+        this._entityIds.kegName = entityId;
       }
     }
   }
@@ -223,6 +228,20 @@ export class PerfectDraftCard extends LitElement {
         const resolved = resolveBeer(entityState, this._config.custom_beers);
         if (resolved.slug !== this._beer?.slug) {
           this._beer = resolved;
+        }
+      }
+    } else {
+      // Auto-detect the tapped beer from the PerfectDraft integration: product ID first, name second.
+      const idState = this._getState(this._entityIds.kegProduct);
+      const nameState = this._getState(this._entityIds.kegName);
+      const validName = nameState && nameState !== "unavailable" && nameState !== "unknown" ? nameState : undefined;
+      let live: BeerEntry | undefined;
+      if (idState && /^\d+$/.test(idState)) live = getBeerByKegId(idState);
+      if (!live && validName) live = resolveBeer(validName, this._config.custom_beers);
+      if (live) {
+        const label = validName ?? live.name; // authoritative PerfectDraft name wins for the label
+        if (live.slug !== this._beer?.slug || this._beer?.name !== label) {
+          this._beer = { ...live, name: label };
         }
       }
     }
