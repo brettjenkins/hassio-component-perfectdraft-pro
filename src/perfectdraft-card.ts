@@ -16,8 +16,6 @@ import {
   type BeerEntry,
   resolveBeer,
   getBeerByKegId,
-  getAllBeers,
-  searchBeers,
   getBreweryLogo,
 } from "./beer-catalog.js";
 import "./editor.js";
@@ -64,8 +62,6 @@ export class PerfectDraftCard extends LitElement {
   @state() private _matrixColumns?: number;
   @state() private _maxMatrixWidth?: string;
   @state() private _showGlassDialog = false;
-  @state() private _showBeerDialog = false;
-  @state() private _beerSearchQuery = "";
   @state() private _failedImages = new Set<string>();
 
   private _entityIds: { temperature?: string; kegRemaining?: string; kegFreshness?: string; kegProduct?: string; kegName?: string } = {};
@@ -92,9 +88,7 @@ export class PerfectDraftCard extends LitElement {
     const savedGlass = localStorage.getItem(storageKey(config.device_id, "glass"));
     this._glassSize = savedGlass ? parseInt(savedGlass, 10) : (config.glass_size ?? DEFAULT_GLASS_SIZE);
 
-    const savedBeer = localStorage.getItem(storageKey(config.device_id, "beer"));
-    const beerName = savedBeer ?? config.beer_name;
-    this._beer = resolveBeer(beerName, config.custom_beers);
+    this._beer = resolveBeer(config.beer_name, config.custom_beers);
   }
 
   public getCardSize(): number {
@@ -191,22 +185,9 @@ export class PerfectDraftCard extends LitElement {
     }
   }
 
-  private _selectBeer(beer: BeerEntry): void {
-    this._beer = beer;
-    this._showBeerDialog = false;
-    this._beerSearchQuery = "";
-    if (this._config?.device_id) {
-      localStorage.setItem(storageKey(this._config.device_id, "beer"), beer.name);
-    }
-  }
-
   private _imgError(src: string): void {
     this._failedImages = new Set(this._failedImages).add(src);
   }
-
-  private _openBeerDialog = (): void => {
-    this._showBeerDialog = true;
-  };
 
   private _openGlassDialog = (): void => {
     this._showGlassDialog = true;
@@ -272,7 +253,6 @@ export class PerfectDraftCard extends LitElement {
       <ha-card class="tier-${tier} layout-${this._layout}">
         ${body}
         ${this._showGlassDialog ? this._renderGlassDialog() : nothing}
-        ${this._showBeerDialog ? this._renderBeerDialog() : nothing}
       </ha-card>
     `;
   }
@@ -378,7 +358,7 @@ export class PerfectDraftCard extends LitElement {
   private _renderLandscape(c: RenderCtx): TemplateResult {
     return html`
       <div class="card-content layout-landscape-content">
-        <div class="label-zone" @click=${this._openBeerDialog} style="${this._labelStyle(c.beer)}">
+        <div class="label-zone" style="${this._labelStyle(c.beer)}">
           ${this._renderLabelInner(c.beer, c.temp)}
         </div>
         <div class="keg-zone" @click=${this._openGlassDialog}>${this._renderKegContent(c)}</div>
@@ -389,7 +369,7 @@ export class PerfectDraftCard extends LitElement {
   private _renderPortrait(c: RenderCtx): TemplateResult {
     return html`
       <div class="card-content layout-portrait-content">
-        <div class="label-zone label-zone-top" @click=${this._openBeerDialog} style="${this._labelStyle(c.beer)}">
+        <div class="label-zone label-zone-top" style="${this._labelStyle(c.beer)}">
           ${this._renderLabelInner(c.beer, c.temp)}
         </div>
         <div class="keg-zone" @click=${this._openGlassDialog}>${this._renderKegContent(c)}</div>
@@ -401,8 +381,8 @@ export class PerfectDraftCard extends LitElement {
     const pct = c.kegPct ?? 0;
     return html`
       <div class="card-content layout-compact-content">
-        <div class="compact-visual" @click=${this._openBeerDialog}>${this._renderVisual(c.beer)}</div>
-        <div class="compact-main" @click=${this._openBeerDialog}>
+        <div class="compact-visual">${this._renderVisual(c.beer)}</div>
+        <div class="compact-main">
           <div class="compact-name">${c.beer.name}</div>
           <div class="compact-bar">
             <div class="compact-bar-fill" style="width: ${pct}%; background: ${c.beer.colors.primary};"></div>
@@ -420,7 +400,7 @@ export class PerfectDraftCard extends LitElement {
     return html`
       <div class="card-content layout-hero-content"
            style="background: radial-gradient(circle at 50% 38%, ${c.beer.colors.primary}33, ${c.beer.colors.primary}0d);">
-        <div class="hero-visual" @click=${this._openBeerDialog}>${this._renderVisual(c.beer)}</div>
+        <div class="hero-visual">${this._renderVisual(c.beer)}</div>
         <div class="hero-scrim" @click=${this._openGlassDialog}>
           <div class="hero-line">
             <span class="hero-name">${c.beer.name}</span>
@@ -437,7 +417,7 @@ export class PerfectDraftCard extends LitElement {
     const pct = c.kegPct ?? 0;
     return html`
       <div class="card-content layout-vessel-content">
-        <div class="vessel-top" @click=${this._openBeerDialog}>
+        <div class="vessel-top">
           <span class="vessel-name">${c.beer.name}</span>
           <span class="vessel-temp">❄ ${this._tempText(c.temp)}</span>
         </div>
@@ -511,61 +491,6 @@ export class PerfectDraftCard extends LitElement {
               </div>
             `,
           )}
-        </div>
-      </div>
-    `;
-  }
-
-  private _renderBeerDialog(): TemplateResult {
-    const beers = this._beerSearchQuery
-      ? searchBeers(this._beerSearchQuery)
-      : getAllBeers();
-
-    const customBeers = (this._config.custom_beers ?? []).filter(
-      (cb) =>
-        !this._beerSearchQuery ||
-        cb.name.toLowerCase().includes(this._beerSearchQuery.toLowerCase()),
-    );
-
-    return html`
-      <div class="dialog-overlay" @click=${() => { this._showBeerDialog = false; this._beerSearchQuery = ""; }}>
-        <div class="dialog beer-dialog" @click=${(e: Event) => e.stopPropagation()}>
-          <div class="dialog-title">Select Beer</div>
-          <input
-            class="beer-search"
-            type="text"
-            placeholder="Search beers..."
-            .value=${this._beerSearchQuery}
-            @input=${(e: InputEvent) => { this._beerSearchQuery = (e.target as HTMLInputElement).value; }}
-          />
-          <div class="beer-list">
-            ${beers.map(
-              (b) => html`
-                <div class="dialog-option beer-option ${b.slug === this._beer?.slug ? "selected" : ""}"
-                     @click=${() => this._selectBeer(b)}>
-                  <span class="beer-color-dot" style="background: ${b.colors.primary};"></span>
-                  <span class="option-label">${b.name}</span>
-                  <span class="option-desc">${b.brewery} · ${b.abv}%</span>
-                </div>
-              `,
-            )}
-            ${customBeers.length > 0
-              ? html`
-                  <div class="custom-heading">Custom</div>
-                  ${customBeers.map(
-                    (cb) => html`
-                      <div class="dialog-option beer-option"
-                           @click=${() => this._selectBeer(resolveBeer(cb.name, this._config.custom_beers))}>
-                        <span class="beer-color-dot" style="background: ${cb.color_primary ?? "#555"};"></span>
-                        <span class="option-label">${cb.name}</span>
-                        <span class="option-desc">${cb.brewery ?? "Custom"}</span>
-                      </div>
-                    `,
-                  )}
-                `
-              : nothing
-            }
-          </div>
         </div>
       </div>
     `;
