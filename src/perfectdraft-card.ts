@@ -56,7 +56,7 @@ function parseNumericState(stateStr: string | undefined): number | null {
 export class PerfectDraftCard extends LitElement {
   @property({ attribute: false }) public hass: any;
   @state() private _config!: PerfectDraftCardConfig;
-  @state() private _beer!: BeerEntry;
+  @state() private _beer?: BeerEntry;
   @state() private _glassSize = DEFAULT_GLASS_SIZE;
   @state() private _layout: CardLayout = DEFAULT_LAYOUT as CardLayout;
   @state() private _matrixColumns?: number;
@@ -87,8 +87,6 @@ export class PerfectDraftCard extends LitElement {
 
     const savedGlass = localStorage.getItem(storageKey(config.device_id, "glass"));
     this._glassSize = savedGlass ? parseInt(savedGlass, 10) : (config.glass_size ?? DEFAULT_GLASS_SIZE);
-
-    this._beer = resolveBeer(config.beer_name, config.custom_beers);
   }
 
   public getCardSize(): number {
@@ -128,7 +126,7 @@ export class PerfectDraftCard extends LitElement {
       }
     }
     const firstDevice = deviceIds.size === 1 ? [...deviceIds][0] : "";
-    return { device_id: firstDevice, beer_name: "Stella Artois", glass_size: DEFAULT_GLASS_SIZE, layout: DEFAULT_LAYOUT };
+    return { device_id: firstDevice, glass_size: DEFAULT_GLASS_SIZE, layout: DEFAULT_LAYOUT };
   }
 
   public static getConfigElement(): HTMLElement {
@@ -202,28 +200,17 @@ export class PerfectDraftCard extends LitElement {
       return html`<ha-card><div class="error">No device configured. Please edit this card to select a PerfectDraft device.</div></ha-card>`;
     }
 
-    // Check beer_entity override
-    if (this._config.beer_entity) {
-      const entityState = this._getState(this._config.beer_entity);
-      if (entityState && entityState !== "unavailable" && entityState !== "unknown") {
-        const resolved = resolveBeer(entityState, this._config.custom_beers);
-        if (resolved.slug !== this._beer?.slug) {
-          this._beer = resolved;
-        }
-      }
-    } else {
-      // Auto-detect the tapped beer from the PerfectDraft integration: product ID first, name second.
-      const idState = this._getState(this._entityIds.kegProduct);
-      const nameState = this._getState(this._entityIds.kegName);
-      const validName = nameState && nameState !== "unavailable" && nameState !== "unknown" ? nameState : undefined;
-      let live: BeerEntry | undefined;
-      if (idState && /^\d+$/.test(idState)) live = getBeerByKegId(idState);
-      if (!live && validName) live = resolveBeer(validName, this._config.custom_beers);
-      if (live) {
-        const label = validName ?? live.name; // authoritative PerfectDraft name wins for the label
-        if (live.slug !== this._beer?.slug || this._beer?.name !== label) {
-          this._beer = { ...live, name: label };
-        }
+    // Auto-detect the tapped beer from the PerfectDraft integration: product ID first, name second.
+    const idState = this._getState(this._entityIds.kegProduct);
+    const nameState = this._getState(this._entityIds.kegName);
+    const validName = nameState && nameState !== "unavailable" && nameState !== "unknown" ? nameState : undefined;
+    let live: BeerEntry | undefined;
+    if (idState && /^\d+$/.test(idState)) live = getBeerByKegId(idState);
+    if (!live && validName) live = resolveBeer(validName, this._config.custom_beers);
+    if (live) {
+      const label = validName ?? live.name; // authoritative PerfectDraft name wins for the label
+      if (live.slug !== this._beer?.slug || this._beer?.name !== label) {
+        this._beer = { ...live, name: label };
       }
     }
 
